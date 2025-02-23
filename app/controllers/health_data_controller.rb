@@ -79,12 +79,14 @@ class HealthDataController < ApplicationController
     @health_datum = HealthDatum.new(health_datum_params)
     metrics = JSON.parse(request.env["RAW_POST_DATA"]).with_indifferent_access.dig(:data, :metrics)
     summary = metrics .map do |metric| 
-          "#{metric[:name]}: #{total(metric)} #{metric[:units]}"
+          "#{metric[:name]}: #{total(metric)}"
     end
     date = Date.parse(metrics.first.dig("data").first.dig("date"))
     summary.push("created: #{date.strftime("%Y-%m-%d")}")
-    filepath = date&.strftime("%Y/%m/%d/health_data.md")
 
+    directory = date&.strftime("%Y/%m/%d/")
+    filepath = date&.strftime("#{directory}/health_data.md")
+    FileUtils.mkdir_p(directory)
     File.write("/data/vimwiki/knowledgebase/#{filepath}", "---\n#{summary.join("\n")}\n---\n")
 
     if @health_datum.save
