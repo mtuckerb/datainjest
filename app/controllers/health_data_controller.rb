@@ -14,15 +14,23 @@ class HealthDataController < ApplicationController
   end
 
   def sum(metric)
-     metric[:data].sum do |m|
-        m[:qty] || 0
-      end
+    metric[:data].sum do |m|
+      m[:qty] || 0
+    end
   end
 
   def average(metric)
     return 0 unless metric.dig(:data)
-      sum(metric) / metric.dig(:data).size
+    sum(metric) / metric.dig(:data).size
   end
+
+  def map_metrics(metric)
+    return 0 unless metric.dig(:data)
+    metric.dig(:data).map { |m| m }
+  end
+  def blood_pressure_data(metric) 
+    return map_metrics(metric).sort{|m| Chronic.parse(m.dig("date"))}.map { |m| "#{m["diastolic"]}/#{m["systolic"]}"}
+  end  
 
   def total(metric) 
     return unless metric.dig(:name)
@@ -71,6 +79,10 @@ class HealthDataController < ApplicationController
       sum(metric)
     when "physical_effort"
       sum(metric)
+    when "weight_body_mass"
+      average(metric).round(2)      
+    when "blood_pressure"
+      blood_pressure_data(metric)
     end
   end
 
@@ -78,16 +90,29 @@ class HealthDataController < ApplicationController
   def create
     @health_datum = HealthDatum.new(health_datum_params)
     metrics = JSON.parse(request.env["RAW_POST_DATA"]).with_indifferent_access.dig(:data, :metrics)
-    summary = metrics .map do |metric| 
-          "#{metric[:name]}: #{total(metric)}"
+    summary = metrics.map do |metric| 
+      "#{metric[:name]}: #{total(metric)}"
     end
     date = Date.parse(metrics.first.dig("data").first.dig("date"))
     summary.push("created: #{date.strftime("%Y-%m-%d")}")
 
-    directory = date&.strftime("%Y/%m/%d/")
-    filepath = date&.strftime("#{directory}/health_data.md")
-    FileUtils.mkdir_p(directory)
-    File.write("/data/vimwiki/knowledgebase/#{filepath}", "---\n#{summary.join("\n")}\n---\n")
+    date_directory = date&.strftime("%Y/%m/%d")
+    fullpath = "/data/vimwiki/knowledgebase/#{date_directory}"
+    FileUtils.mkdir_p(fullpath)
+    filepath = date&.strftime("#{fullpath}/health_data.md")
+
+    # # Generate charts
+    # chart_service = ChartGeneratorService.new(metrics)
+    # charts = chart_service.generate_charts
+
+    # # Save charts as PNGs
+    # charts.each_with_index do |chart, index|
+    #   chart_path = "#{fullpath}/chart_#{index}.png"
+    #   save_chart_as_png(chart, chart_path)
+    #   summary.push("![Chart #{index}](#{chart_path})")
+    # end
+
+    File.write("#{filepath}", "---\n#{summary.join("\n")}\n---\n")
 
     if @health_datum.save
       render json: @health_datum, status: :created, location: @health_datum
@@ -111,13 +136,33 @@ class HealthDataController < ApplicationController
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_health_datum
-      @health_datum = HealthDatum.find(params[:id])
-    end
+  # Use callbacks to share common setup or constraints between actions.
+  def set_health_datum
+    @health_datum = HealthDatum.find(params[:id])
+  end
 
-    # Only allow a list of trusted parameters through.
-    def health_datum_params
-      params.fetch(:health_datum, {})
-    end
+  # Only allow a list of trusted parameters through.
+  def health_datum_params
+    params.fetch(:health_datum, {})
+  end
+
+  def save_chart_as_png(chart, path)
+    require 'grover'
+    html = <<-HTML
+      <html>
+        <head>
+          <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        </head>
+        <body>
+          <canvas id="myChart" width="400" height="200"></canvas>
+          <script>
+            new Chart(document.getElementById('myChart'), #{chart.to_json});
+          </script>
+        </body>
+      </html>
+    HTML
+
+    png = Grover.new(html).to_png
+    File.binwrite(path, png)
+  end
 end

@@ -47,3 +47,5 @@ gem "redcarpet", "~> 3.6"
 gem "httparty", "~> 0.22.0"
 
 gem "dotenv-rails", "~> 3.1"
+
+gem "chronic", "~> 0.10.2"

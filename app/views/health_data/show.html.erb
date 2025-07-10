@@ -1,0 +1,15 @@
+<h1>Health Data Visualization</h1>
+
+<% @charts.each_with_index do |chart, index| %>
+  <div>
+    <canvas id="chart-<%= index %>"></canvas>
+  </div>
+<% end %>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  <% @charts.each_with_index do |chart, index| %>
+    new Chart(document.getElementById('chart-<%= index %>'), <%= raw chart.to_json %>);
+  <% end %>
+});
+</script>
