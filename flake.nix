@@ -16,34 +16,46 @@
           config.permittedInsecurePackages = ["openssl-1.1.1w"];
         };
       });
-
-      packages = forEachSupportedSystem ({ pkgs }: {
-        default = self.packages.${pkgs.system}.dataingest;
-        dataingest = pkgs.writeShellScriptBin "dataingest" ''
-          #!/usr/bin/env bash
-          set -e
-          DATA_DIR=''${1:-/var/lib/dataingest}
-          mkdir -p $DATA_DIR/tmp $DATA_DIR/logs
-          chmod -R 755 $DATA_DIR
-
-          echo "Running Data Ingester..."
-            TMP_DIR=$DATA_DIR/tmp \
-            TMPDIR=$DATA_DIR/tmp \
-            LOG_DIR=$DATA_DIR/logs \
-            RAILS_TMP_PATH=$DATA_DIR/tmp \
-            RAILS_LOG_PATH=$DATA_DIR/logs \
-            RAILS_SERVE_STATIC_FILES=true \
-            RAILS_ENV=production \
-            bundle exec puma -C config/puma.rb -b 10.1.0.75 -p 5007 &
-          echo "finished starting dataingest"
-          
-        '';
-      });
-
     in {
       schemas = flake-schemas.schemas;
 
-      packages = packages;
+      packages = forEachSupportedSystem ({ pkgs }:
+        let
+          targetRuby = pkgs.ruby_3_3; 
+          myBundler = pkgs.bundler.override {
+            ruby = targetRuby;
+          };
+          gems = pkgs.bundlerEnv {
+            ruby = targetRuby;
+            name = "dataingest";
+            bundler = myBundler;
+            gemfile = ./Gemfile;
+            lockfile = ./Gemfile.lock;
+            gemset = ./gemset.nix;
+          };
+        in {
+          default = self.packages.${pkgs.system}.dataingest;
+          inherit gems;
+          dataingest = pkgs.writeShellScriptBin "dataingest" ''
+            #!/usr/bin/env bash
+            set -e
+            DATA_DIR=''${1:-/var/lib/dataingest}
+            mkdir -p $DATA_DIR/tmp $DATA_DIR/logs
+            chmod -R 755 $DATA_DIR
+
+            echo "Running Data Ingester..."
+              TMP_DIR=$DATA_DIR/tmp \
+              TMPDIR=$DATA_DIR/tmp \
+              LOG_DIR=$DATA_DIR/logs \
+              RAILS_TMP_PATH=$DATA_DIR/tmp \
+              RAILS_LOG_PATH=$DATA_DIR/logs \
+              RAILS_SERVE_STATIC_FILES=true \
+              RAILS_ENV=production \
+              bundle exec puma -C config/puma.rb -b 10.1.0.75 -p 5007 &
+            echo "finished starting dataingest"
+          '';
+        }
+      );
 
       apps = forEachSupportedSystem ({ pkgs }: {
         default = self.apps.${pkgs.system}.dataingest;
@@ -53,25 +65,38 @@
         };
       });
 
-      devShells = forEachSupportedSystem ({ pkgs }: {
-        default = pkgs.mkShell {
-          packages = with pkgs; [
-            nodePackages.yarn
-            ruby_3_2
-            rubocop
-            curl
-            git
-            jq
-            wget
-            nixpkgs-fmt
-            postgresql_16
-            iconv
-            libyaml
-            pm2
-            self.packages.${pkgs.system}.dataingest
-          ];
-        };
-      });
+      devShells = forEachSupportedSystem ({ pkgs }: 
+        let
+          targetRuby = pkgs.ruby_3_3; # Make sure this matches the version in packages
+          gems = self.packages.${pkgs.system}.gems; # Access gems from packages
+        in {
+          default = pkgs.mkShell {
+            shellHook = ''
+              export BUNDLE_DISABLE_SHARED_GEMS=true
+            '';
+            buildInputs = with pkgs; [
+              targetRuby
+              bundler
+              nodejs
+              yarn
+              postgresql
+            ];
+            packages = with pkgs; [
+              nodePackages.yarn
+              rubocop
+              curl
+              git
+              wget
+              nixpkgs-fmt
+              postgresql_16
+              libiconv
+              libyaml
+              pm2
+              self.packages.${pkgs.system}.dataingest
+            ];
+          };
+        }
+      );
 
       nixosModules.default = { config, lib, pkgs, ... }: 
         let
