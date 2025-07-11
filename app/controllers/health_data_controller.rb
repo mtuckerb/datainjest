@@ -1,3 +1,4 @@
+require 'vega'
 class HealthDataController < ApplicationController
   before_action :set_health_datum, only: %i[ show update destroy ]
 
@@ -101,19 +102,31 @@ class HealthDataController < ApplicationController
     FileUtils.mkdir_p(fullpath)
     filepath = date&.strftime("#{fullpath}/health_data.md")
 
-    # # Generate charts
-    # chart_service = ChartGeneratorService.new(metrics)
-    # charts = chart_service.generate_charts
+  
 
-    # # Save charts as PNGs
-    # charts.each_with_index do |chart, index|
-    #   chart_path = "#{fullpath}/chart_#{index}.png"
-    #   save_chart_as_png(chart, chart_path)
-    #   summary.push("![Chart #{index}](#{chart_path})")
-    # end
+# Generate charts
+charts = metrics.map do |metric|
+  data = metric[:data].map { |m| { date: m[:date], value: m[:qty].to_f } }
+  
+  chart = Vega.lite
+    .data(data)
+    .mark(:line)
+    .encoding(
+      x: { field: :date, type: :temporal, title: 'Date' },
+      y: { field: :value, type: :quantitative, title: metric[:name] }
+    )
+    .width(800)
+    .height(400)
+    .title(metric[:name])
 
-    File.write("#{filepath}", "---\n#{summary.join("\n")}\n---\n")
+  [metric[:name], chart]
+end
 
+# Save charts as PNGs
+charts.each do |name, chart|
+  chart_path = "#{fullpath}/chart_#{name.downcase.gsub(' ', '_')}.png"
+  File.binwrite(chart_path, chart.to_png)
+end
     if @health_datum.save
       render json: @health_datum, status: :created, location: @health_datum
     else
@@ -146,23 +159,4 @@ class HealthDataController < ApplicationController
     params.fetch(:health_datum, {})
   end
 
-  def save_chart_as_png(chart, path)
-    require 'grover'
-    html = <<-HTML
-      <html>
-        <head>
-          <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        </head>
-        <body>
-          <canvas id="myChart" width="400" height="200"></canvas>
-          <script>
-            new Chart(document.getElementById('myChart'), #{chart.to_json});
-          </script>
-        </body>
-      </html>
-    HTML
-
-    png = Grover.new(html).to_png
-    File.binwrite(path, png)
-  end
 end
