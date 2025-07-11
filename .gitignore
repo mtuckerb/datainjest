@@ -3,4 +3,6 @@ result
 storage/
 log/
 node_modules/
+vendor/
+.direnv
 

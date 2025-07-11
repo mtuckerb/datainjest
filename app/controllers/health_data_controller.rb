@@ -99,34 +99,44 @@ class HealthDataController < ApplicationController
 
     date_directory = date&.strftime("%Y/%m/%d")
     fullpath = "/data/vimwiki/knowledgebase/#{date_directory}"
-    FileUtils.mkdir_p(fullpath)
-    filepath = date&.strftime("#{fullpath}/health_data.md")
 
-  
 
-# Generate charts
-charts = metrics.map do |metric|
-  data = metric[:data].map { |m| { date: m[:date], value: m[:qty].to_f } }
-  
-  chart = Vega.lite
-    .data(data)
-    .mark(:line)
-    .encoding(
-      x: { field: :date, type: :temporal, title: 'Date' },
-      y: { field: :value, type: :quantitative, title: metric[:name] }
-    )
-    .width(800)
-    .height(400)
-    .title(metric[:name])
+  # Generate charts
+  charts = metrics.map do |metric|
+    data = metric[:data].map { |m| { date: m[:date], value: m[:qty].to_f } }
+    
+    chart = Vega.lite
+      .data(data)
+      .mark(:line)
+      .encoding(
+        x: { field: :date, type: :temporal, title: 'Date' },
+        y: { field: :value, type: :quantitative, title: metric[:name] }
+      )
+      .width(800)
+      .height(400)
+      .title(metric[:name])
 
-  [metric[:name], chart]
-end
+    [metric[:name], chart]
+  end
 
-# Save charts as PNGs
-charts.each do |name, chart|
-  chart_path = "#{fullpath}/chart_#{name.downcase.gsub(' ', '_')}.png"
-  File.binwrite(chart_path, chart.to_png)
-end
+  chart_paths = []
+  charts.each do |name, chart|
+    chart_path = "Attachments/chart_#{name.downcase.gsub(' ', '_')}.svg"
+    chart_paths.push(chart_path)
+    File.binwrite("#{fullpath}/#{chart_path}", chart.to_svg)
+  end
+
+  FileUtils.mkdir_p(fullpath)
+  filepath = date&.strftime("#{fullpath}/health_data.md")
+  file = <<~CONTENT
+    ---
+    #{summary.join("\n")}
+    ---
+    #{chart_paths.map { |path| "![[#{path}]]" }.join("\n")}
+  CONTENT
+
+  File.write("#{filepath}", file )
+
     if @health_datum.save
       render json: @health_datum, status: :created, location: @health_datum
     else
