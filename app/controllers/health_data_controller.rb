@@ -1,172 +1,64 @@
 require 'vega'
 class HealthDataController < ApplicationController
-  before_action :set_health_datum, only: %i[ show update destroy ]
+  before_action :set_health_metric, only: %i[ show update destroy ]
 
   # GET /health_data
   def index
-    @health_data = HealthDatum.all
-
-    render json: @health_data
+    @health_metrics = HealthMetric.all
+    render json: @health_metrics
   end
 
   # GET /health_data/1
   def show
-    render json: @health_datum
-  end
-
-  def sum(metric)
-    metric[:data].sum do |m|
-      m[:qty] || 0
-    end
-  end
-
-  def average(metric)
-    return 0 unless metric.dig(:data)
-    sum(metric) / metric.dig(:data).size
-  end
-
-  def map_metrics(metric)
-    return 0 unless metric.dig(:data)
-    metric.dig(:data).map { |m| m }
-  end
-  def blood_pressure_data(metric) 
-    return map_metrics(metric).sort{|m| Chronic.parse(m.dig("date"))}.map { |m| "#{m["diastolic"]}/#{m["systolic"]}"}
-  end  
-
-  def total(metric) 
-    return unless metric.dig(:name)
-    case metric.dig(:name)
-    when "apple_stand_hour"
-      sum(metric)
-    when "apple_exercise_time"
-      sum(metric)
-    when "flights_climbed"
-      sum(metric)
-    when "vo2_max"
-      average(metric)
-    when "stair_speed_down"
-      average(metric)
-    when  "headphone_audio_exposure"
-      average(metric)
-    when "stair_speed_up"
-      average(metric)
-    when "heart_rate_variability"
-      average(metric)
-    when "apple_stand_time"
-      sum(metric)
-    when "walking_step_length"
-      average(metric)
-    when "walking_double_support_percentage"
-      average(metric)
-    when "blood_oxygen_saturation"
-      average(metric)
-    when "environmental_audio_exposure"
-      average(metric)
-    when "walking_speed"
-      average(metric)
-    when "walking_running_distance"
-      sum(metric)
-    when "time_in_daylight"
-      sum(metric)
-    when "step_count"
-      sum(metric)
-    when "resting_heart_rate"
-      average(metric)
-    when "walking_heart_rate_average"
-      average(metric)
-    when "active_energy"
-      sum(metric)
-    when "basal_energy_burned"
-      sum(metric)
-    when "physical_effort"
-      sum(metric)
-    when "weight_body_mass"
-      average(metric).round(2)      
-    when "blood_pressure"
-      blood_pressure_data(metric)
-    end
+    render json: @health_metric
   end
 
   # POST /health_data
   def create
-    @health_datum = HealthDatum.new(health_datum_params)
-    metrics = JSON.parse(request.env["RAW_POST_DATA"]).with_indifferent_access.dig(:data, :metrics)
-    summary = metrics.map do |metric| 
-      "#{metric[:name]}: #{total(metric)}"
-    end
+    metrics = JSON.parse(request.body.read).with_indifferent_access.dig(:data, :metrics)
     date = Date.parse(metrics.first.dig("data").first.dig("date"))
-    summary.push("created: #{date.strftime("%Y-%m-%d")}")
 
-    date_directory = date&.strftime("%Y/%m/%d")
-    fullpath = "/data/vimwiki/knowledgebase/#{date_directory}"
-
-
-  # Generate charts
-  charts = metrics.map do |metric|
-    data = metric[:data].map { |m| { date: m[:date], value: m[:qty].to_f } }
-    
-    chart = Vega.lite
-      .data(data)
-      .mark(:line)
-      .encoding(
-        x: { field: :date, type: :temporal, title: 'Date' },
-        y: { field: :value, type: :quantitative, title: metric[:name] }
-      )
-      .width(800)
-      .height(400)
-      .title(metric[:name])
-
-    [metric[:name], chart]
-  end
-
-  chart_paths = []
-  charts.each do |name, chart|
-    chart_path = "Attachments/chart_#{name.downcase.gsub(' ', '_')}.svg"
-    chart_paths.push(chart_path)
-    File.binwrite("#{fullpath}/#{chart_path}", chart.to_svg)
-  end
-
-  FileUtils.mkdir_p(fullpath)
-  filepath = date&.strftime("#{fullpath}/health_data.md")
-  file = <<~CONTENT
-    ---
-    #{summary.join("\n")}
-    ---
-    #{chart_paths.map { |path| "![[#{path}]]" }.join("\n")}
-  CONTENT
-
-  File.write("#{filepath}", file )
-
-    if @health_datum.save
-      render json: @health_datum, status: :created, location: @health_datum
-    else
-      render json: @health_datum.errors, status: :unprocessable_entity
+    ActiveRecord::Base.transaction do
+      metrics.each do |metric|
+        metric[:data].each do |data_point|
+          health_metric = HealthMetric.find_or_initialize_by(
+            name: metric[:name],
+            date: DateTime.parse(data_point[:date])
+          )
+          health_metric.data = data_point.except(:date)
+          health_metric.save!
+        end
+      end
     end
+
+    HealthDataFileService.new(date).create_files
+
+    render json: { message: "Health data created or updated successfully" }, status: :created
+  rescue StandardError => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   # PATCH/PUT /health_data/1
   def update
-    if @health_datum.update(health_datum_params)
-      render json: @health_datum
+    if @health_metric.update(health_metric_params)
+      render json: @health_metric
     else
-      render json: @health_datum.errors, status: :unprocessable_entity
+      render json: @health_metric.errors, status: :unprocessable_entity
     end
   end
 
   # DELETE /health_data/1
   def destroy
-    @health_datum.destroy!
+    @health_metric.destroy!
   end
 
   private
-  # Use callbacks to share common setup or constraints between actions.
-  def set_health_datum
-    @health_datum = HealthDatum.find(params[:id])
+
+  def set_health_metric
+    @health_metric = HealthMetric.find(params[:id])
   end
 
-  # Only allow a list of trusted parameters through.
-  def health_datum_params
-    params.fetch(:health_datum, {})
+  def health_metric_params
+    params.require(:health_metric).permit(:name, :date, data: {})
   end
-
 end
