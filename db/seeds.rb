@@ -39,9 +39,9 @@ MetricPresentation.create!([
   },
   {
     metric_name: 'weight_body_mass',
-    chart_type: 'line',
-    lambda: 'lambda { |x| x == 145 }',
-    color_palette: '["#0000ff"]',
+    chart_type: 'gauge',
+    lambda: 'lambda { |x| x <= 145 }',
+    color_palette: '["#0000ff", "#00ff00"]',
     title: 'Body Weight'
   },
   {
@@ -59,3 +59,17 @@ MetricPresentation.create!([
     title: 'Blood Oxygen Saturation'
   }
 ])
+
+# Add this to your seeds file or create a separate rake task
+
+default_presentations = [
+  { metric_name: 'weight_body_mass', chart_type: 'line', title: 'Weight', color_palette: '["#66c2a5", "#fc8d62"]', lambda: 'lambda { |value| value > 150 }' },
+  { metric_name: 'blood_pressure', chart_type: 'line', title: 'Blood Pressure' },
+  # Add more default presentations for your other metrics
+]
+
+default_presentations.each do |presentation|
+  MetricPresentation.find_or_create_by!(metric_name: presentation[:metric_name]) do |p|
+    p.attributes = presentation
+  end
+end
