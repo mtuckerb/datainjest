@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_07_12_104611) do
+ActiveRecord::Schema[7.2].define(version: 2025_07_13_235234) do
   create_table "health_data", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -33,6 +33,9 @@ ActiveRecord::Schema[7.2].define(version: 2025_07_12_104611) do
     t.string "title"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "active"
+    t.float "chart_min"
+    t.float "chart_max"
     t.index ["metric_name"], name: "index_metric_presentations_on_metric_name", unique: true
   end
 end
