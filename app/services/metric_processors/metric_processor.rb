@@ -2,7 +2,6 @@ module MetricProcessors
 
   class MetricProcessor
     def self.for(metric_name)
-      puts "🏭 Selecting processor for: #{metric_name}"
       case metric_name
       when "blood_pressure"
         BloodPressureProcessor.new

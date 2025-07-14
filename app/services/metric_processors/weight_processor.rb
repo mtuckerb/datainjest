@@ -1,14 +1,12 @@
 module MetricProcessors
   class WeightProcessor < DefaultMetricProcessor
     def process(data)
-      puts "🏋️ Processing weight data: #{data.inspect}"
       processed_data = data.map do |m|
         {
           date: m['date'],
           value: m['qty'].to_f.round(2)
         }
       end
-      puts "Processed weight data: #{processed_data.inspect}"
       processed_data
     end
 

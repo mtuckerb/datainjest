@@ -50,13 +50,11 @@ class HealthDataFileService
 
   def create_charts
     @chart_paths = @metrics.map do |metric|
-      puts "Processing metric: #{metric[:name]}"
       presentation = MetricPresentation.find_or_create_default(metric[:name])
-      puts "Presentation for #{metric[:name]}: #{presentation.inspect}"
       next unless presentation.active
       
       chart = ChartGenerators::ChartGenerator.new(metric, presentation).generate
-      puts "Generated chart for #{metric[:name]}: #{chart.inspect}"
+      puts "📈 Generated chart for #{metric[:name]}: "
       
       chart_path = "#{@date&.strftime("%Y-%m-%d")}_#{metric[:name].downcase.gsub(' ', '_')}.svg"
       File.binwrite("#{@fullpath}/Attachments/#{chart_path}", chart.to_svg)
@@ -72,9 +70,6 @@ class HealthDataFileService
       ---
       #{@chart_paths.map { |path| "![[#{path}|500]]" }.join(" ")}
     CONTENT
-    puts "Creating Markdown file at #{filepath}"
-    puts "Summary:"
-    puts summary
 
     File.write(filepath, file_content)
   end
