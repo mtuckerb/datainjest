@@ -125,6 +125,13 @@
       sha256 = "497918d2f9dca528fdca4b88d84e4ef4387256d984b8154e9d5d3fe5a9c8835f";
     };
   };
+  bundle = {
+    version = "0.0.1";
+    source = {
+      type = "gem";
+      sha256 = "9a26002c267dc1078ce38cd125f6d6ce5104f81d758c0323d09870a2b3a11fa9";
+    };
+  };
   chronic = {
     version = "0.10.2";
     source = {

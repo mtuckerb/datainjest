@@ -18,3 +18,5 @@ gem "chronic", "~> 0.10.2"
 gem "vega", "~> 0.4.0"
 
 
+
+gem "bundle", "~> 0.0.1"
