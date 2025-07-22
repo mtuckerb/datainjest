@@ -21,7 +21,7 @@
 
       packages = forEachSupportedSystem ({ pkgs }:
         let
-          targetRuby = pkgs.ruby_3_3; 
+          targetRuby = pkgs.ruby_3_3;
           myBundler = pkgs.bundler.override {
             ruby = targetRuby;
           };
@@ -32,6 +32,15 @@
             gemfile = ./Gemfile;
             lockfile = ./Gemfile.lock;
             gemset = ./gemset.nix;
+          };
+          datainjestApp = pkgs.stdenv.mkDerivation {
+            name = "datainjest-app";
+            src = ./.;
+            buildInputs = [ gems targetRuby ];
+            buildPhase = ''
+              cp -r . $out
+              ln -s ${gems}/lib/ruby/gems $out/gems
+            '';
           };
         in {
           default = self.packages.${pkgs.system}.datainjest;
@@ -45,10 +54,14 @@
 
             export GEM_HOME=${gems}/${gems.ruby.gemPath}
             export PATH=${gems}/bin:${pkgs.bundler}/bin:$PATH
+            export RAILS_ROOT=${datainjestApp}
+
+            cd $RAILS_ROOT
 
             echo "Running Data Ingester..."
             echo "PATH: $PATH"
             echo "GEM_HOME: $GEM_HOME"
+            echo "RAILS_ROOT: $RAILS_ROOT"
             which bundle
             bundle --version
 
@@ -107,59 +120,60 @@
       );
 
       nixosModules.default = { config, lib, pkgs, ... }: 
-        let
-          cfg = config.services.datainjest;
-        in {
-          options.services.datainjest= {
-            enable = lib.mkEnableOption "datainjest service";
-            package = lib.mkOption {
-              type = lib.types.package;
-              default = self.packages.${pkgs.system}.datainjest;
-              description = "The datainjest package to use";
-            };
-            dataDir = lib.mkOption {
-              type = lib.types.str;
-              default = "/var/lib/datainjest";
-              description = "Directory to store ingest data";
-            };
-            apiKey = lib.mkOption {
-              type = lib.types.str;
-              description = "API key for datainjest";
-            };
-          };
+  let
+    cfg = config.services.datainjest;
+  in {
+    options.services.datainjest= {
+      enable = lib.mkEnableOption "datainjest service";
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = self.packages.${pkgs.system}.datainjest;
+        description = "The datainjest package to use";
+      };
+      dataDir = lib.mkOption {
+        type = lib.types.str;
+        default = "/var/lib/datainjest";
+        description = "Directory to store ingest data";
+      };
+      apiKey = lib.mkOption {
+        type = lib.types.str;
+        description = "API key for datainjest";
+      };
+    };
 
-          config = lib.mkIf cfg.enable {
-            system.activationScripts.datainjest-debug = ''
-              echo "Datainjest module is being loaded and enabled"
-            '';
-            systemd.services.datainjest = {
-              description = "datainjest Service";
-              after = [ "network.target" ];
-              wantedBy = [ "multi-user.target" ];
-              serviceConfig = {
-                ExecStart = "${cfg.package}/bin/datainjest ${cfg.dataDir}";
-                Restart = "on-failure";
-                StateDirectory = "datainjest";
-                RuntimeDirectory = "datainjest";
-                LogsDirectory = "datainjest";
-                WorkingDirectory = "${self}";
-                User = "datainjest";
-                Group = "datainjest";
-              };
-              environment = {
-                HOME = cfg.dataDir;
-                TMP_DIR = "${cfg.dataDir}/tmp";
-                TMPDIR = "${cfg.dataDir}/tmp";
-                LOG_DIR = "${cfg.dataDir}/logs";
-                RAILS_TMP_PATH = "${cfg.dataDir}/tmp";
-                RAILS_LOG_PATH = "${cfg.dataDir}/logs";
-                RAILS_SERVE_STATIC_FILES = "true";
-                RAILS_ENV = "production";
-                API_KEY = cfg.apiKey;
-                GEM_HOME = "${self.packages.${pkgs.system}.gems}/${self.packages.${pkgs.system}.gems.ruby.gemPath}";
-                PATH = "${self.packages.${pkgs.system}.gems}/bin:$PATH";
-              };
-            };
+    config = lib.mkIf cfg.enable {
+      system.activationScripts.datainjest-debug = ''
+        echo "Datainjest module is being loaded and enabled"
+      '';
+      systemd.services.datainjest = {
+        description = "datainjest Service";
+        after = [ "network.target" ];
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          ExecStart = "${cfg.package}/bin/datainjest ${cfg.dataDir}";
+          Restart = "on-failure";
+          StateDirectory = "datainjest";
+          RuntimeDirectory = "datainjest";
+          LogsDirectory = "datainjest";
+          WorkingDirectory = "${self.packages.${pkgs.system}.datainjestApp}";
+          User = "datainjest";
+          Group = "datainjest";
+        };
+        environment = {
+          HOME = cfg.dataDir;
+          TMP_DIR = "${cfg.dataDir}/tmp";
+          TMPDIR = "${cfg.dataDir}/tmp";
+          LOG_DIR = "${cfg.dataDir}/logs";
+          RAILS_TMP_PATH = "${cfg.dataDir}/tmp";
+          RAILS_LOG_PATH = "${cfg.dataDir}/logs";
+          RAILS_SERVE_STATIC_FILES = "true";
+          RAILS_ENV = "production";
+          API_KEY = cfg.apiKey;
+          GEM_HOME = "${self.packages.${pkgs.system}.gems}/${self.packages.${pkgs.system}.gems.ruby.gemPath}";
+          PATH = "${self.packages.${pkgs.system}.gems}/bin:${pkgs.bundler}/bin:$PATH";
+          RAILS_ROOT = "${self.packages.${pkgs.system}.datainjestApp}";
+        };
+      };
 
             system.activationScripts.datainjest-data-dir = ''
               mkdir -p ${cfg.dataDir}
