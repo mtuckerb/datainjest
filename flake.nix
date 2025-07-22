@@ -151,7 +151,7 @@ nixosModules.default = { config, lib, pkgs, ... }:
         after = [ "network.target" ];
         wantedBy = [ "multi-user.target" ];
         serviceConfig = {
-          ExecStart = "${cfg.package}/bin/datainjest ${cfg.dataDir}";
+          ExecStart = "${pkgs.bash}/bin/bash -c 'source /etc/datainjest/env && ${cfg.package}/bin/datainjest ${cfg.dataDir}'";
           Restart = "on-failure";
           StateDirectory = "datainjest";
           RuntimeDirectory = "datainjest";
@@ -159,23 +159,22 @@ nixosModules.default = { config, lib, pkgs, ... }:
           WorkingDirectory = "${self.packages.${pkgs.system}.datainjestApp}";
           User = "datainjest";
           Group = "datainjest";
-          EnvironmentFile = "/etc/datainjest/env";
         };
       };
 
       environment.etc."datainjest/env".text = ''
-        GEM_HOME=${self.packages.${pkgs.system}.gems}/${self.packages.${pkgs.system}.gems.ruby.gemPath}
-        PATH=${self.packages.${pkgs.system}.gems}/bin:${pkgs.bundler}/bin:${pkgs.ruby}/bin:$PATH
-        RAILS_ROOT=${self.packages.${pkgs.system}.datainjestApp}
-        RAILS_ENV=production
-        API_KEY=${cfg.apiKey}
-        HOME=${cfg.dataDir}
-        TMP_DIR=${cfg.dataDir}/tmp
-        TMPDIR=${cfg.dataDir}/tmp
-        LOG_DIR=${cfg.dataDir}/logs
-        RAILS_TMP_PATH=${cfg.dataDir}/tmp
-        RAILS_LOG_PATH=${cfg.dataDir}/logs
-        RAILS_SERVE_STATIC_FILES=true
+        export GEM_HOME=${self.packages.${pkgs.system}.gems}/${self.packages.${pkgs.system}.gems.ruby.gemPath}
+        export PATH=${self.packages.${pkgs.system}.gems}/bin:${pkgs.bundler}/bin:${pkgs.ruby}/bin:$PATH
+        export RAILS_ROOT=${self.packages.${pkgs.system}.datainjestApp}
+        export RAILS_ENV=production
+        export API_KEY=${cfg.apiKey}
+        export HOME=${cfg.dataDir}
+        export TMP_DIR=${cfg.dataDir}/tmp
+        export TMPDIR=${cfg.dataDir}/tmp
+        export LOG_DIR=${cfg.dataDir}/logs
+        export RAILS_TMP_PATH=${cfg.dataDir}/tmp
+        export RAILS_LOG_PATH=${cfg.dataDir}/logs
+        export RAILS_SERVE_STATIC_FILES=true
       '';
 
       system.activationScripts.datainjest-data-dir = ''
