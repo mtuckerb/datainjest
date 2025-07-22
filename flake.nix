@@ -164,7 +164,7 @@ nixosModules.default = { config, lib, pkgs, ... }:
 
       environment.etc."datainjest/env".text = ''
         export GEM_HOME=${self.packages.${pkgs.system}.gems}/${self.packages.${pkgs.system}.gems.ruby.gemPath}
-        export PATH=${self.packages.${pkgs.system}.gems}/bin:${pkgs.bundler}/bin:${pkgs.ruby}/bin:$PATH
+        export PATH=${self.packages.${pkgs.system}.datainjestApp}/bin:${self.packages.${pkgs.system}.gems}/bin:${pkgs.bundler}/bin:${pkgs.ruby}/bin:$PATH
         export RAILS_ROOT=${self.packages.${pkgs.system}.datainjestApp}
         export RAILS_ENV=production
         export API_KEY=${cfg.apiKey}
@@ -175,6 +175,7 @@ nixosModules.default = { config, lib, pkgs, ... }:
         export RAILS_TMP_PATH=${cfg.dataDir}/tmp
         export RAILS_LOG_PATH=${cfg.dataDir}/logs
         export RAILS_SERVE_STATIC_FILES=true
+        export BUNDLE_PATH=${self.packages.${pkgs.system}.datainjestApp}/gems
       '';
 
       system.activationScripts.datainjest-data-dir = ''
