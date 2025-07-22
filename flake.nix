@@ -113,13 +113,14 @@
               libiconv
               libyaml
               pm2
+              bundix
               self.packages.${pkgs.system}.datainjest
             ];
           };
         }
       );
 
-      nixosModules.default = { config, lib, pkgs, ... }: 
+nixosModules.default = { config, lib, pkgs, ... }: 
   let
     cfg = config.services.datainjest;
   in {
