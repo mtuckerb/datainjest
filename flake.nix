@@ -53,7 +53,7 @@
             chmod -R 755 $DATA_DIR
 
             export GEM_HOME=${gems}/${gems.ruby.gemPath}
-            export PATH=${gems}/bin:${pkgs.bundler}/bin:$PATH
+            export PATH=${gems}/bin:${pkgs.bundler}/bin:${pkgs.ruby}/bin:$PATH
             export RAILS_ROOT=${datainjestApp}
 
             cd $RAILS_ROOT
@@ -159,36 +159,38 @@ nixosModules.default = { config, lib, pkgs, ... }:
           WorkingDirectory = "${self.packages.${pkgs.system}.datainjestApp}";
           User = "datainjest";
           Group = "datainjest";
-        };
-        environment = {
-          HOME = cfg.dataDir;
-          TMP_DIR = "${cfg.dataDir}/tmp";
-          TMPDIR = "${cfg.dataDir}/tmp";
-          LOG_DIR = "${cfg.dataDir}/logs";
-          RAILS_TMP_PATH = "${cfg.dataDir}/tmp";
-          RAILS_LOG_PATH = "${cfg.dataDir}/logs";
-          RAILS_SERVE_STATIC_FILES = "true";
-          RAILS_ENV = "production";
-          API_KEY = cfg.apiKey;
-          GEM_HOME = "${self.packages.${pkgs.system}.gems}/${self.packages.${pkgs.system}.gems.ruby.gemPath}";
-          PATH = "${self.packages.${pkgs.system}.gems}/bin:${pkgs.bundler}/bin:$PATH";
-          RAILS_ROOT = "${self.packages.${pkgs.system}.datainjestApp}";
+          EnvironmentFile = "/etc/datainjest/env";
         };
       };
 
-            system.activationScripts.datainjest-data-dir = ''
-              mkdir -p ${cfg.dataDir}
-              chown -R datainjest:datainjest ${cfg.dataDir}
-            '';
+      environment.etc."datainjest/env".text = ''
+        GEM_HOME=${self.packages.${pkgs.system}.gems}/${self.packages.${pkgs.system}.gems.ruby.gemPath}
+        PATH=${self.packages.${pkgs.system}.gems}/bin:${pkgs.bundler}/bin:${pkgs.ruby}/bin:$PATH
+        RAILS_ROOT=${self.packages.${pkgs.system}.datainjestApp}
+        RAILS_ENV=production
+        API_KEY=${cfg.apiKey}
+        HOME=${cfg.dataDir}
+        TMP_DIR=${cfg.dataDir}/tmp
+        TMPDIR=${cfg.dataDir}/tmp
+        LOG_DIR=${cfg.dataDir}/logs
+        RAILS_TMP_PATH=${cfg.dataDir}/tmp
+        RAILS_LOG_PATH=${cfg.dataDir}/logs
+        RAILS_SERVE_STATIC_FILES=true
+      '';
 
-            users.users.datainjest = {
-              isSystemUser = true;
-              group = "datainjest";
-              home = cfg.dataDir;
-              createHome = true;
-            };
-            users.groups.datainjest = {};
-          };
-        };
+      system.activationScripts.datainjest-data-dir = ''
+        mkdir -p ${cfg.dataDir}
+        chown -R datainjest:datainjest ${cfg.dataDir}
+      '';
+
+      users.users.datainjest = {
+        isSystemUser = true;
+        group = "datainjest";
+        home = cfg.dataDir;
+        createHome = true;
+      };
+      users.groups.datainjest = {};
     };
+  };
+};
 }
