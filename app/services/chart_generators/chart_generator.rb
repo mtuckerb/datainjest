@@ -18,17 +18,24 @@
           .title(@presentation.title)
 
         chart = setup_chart_type(chart)
-        # puts "Chart after setup: #{chart.inspect}"
+        #puts "Chart after setup: #{chart.inspect}"
         
-        chart = add_special_features(chart)
-        chart = add_color_encoding(chart)
-        add_background_highlight(chart)
+        # Only add these features if it's not a blood pressure chart
+        unless @metric[:name] == 'blood_pressure'
+          chart = add_special_features(chart)
+          chart = add_color_encoding(chart)
+          chart = add_background_highlight(chart)
+        end
+
+        chart
       end
 
       private
 
       def setup_chart_type(chart)
         case @presentation.chart_type
+        when 'blood_pressure'
+          setup_blood_pressure_chart(chart)
         when 'gauge', 'arc'
           setup_gauge_chart(chart)
         when 'stacked_line'
@@ -173,6 +180,73 @@
           )
       end
       
+      def setup_blood_pressure_chart(chart)
+        data = @metric[:data]
+        puts "Blood Pressure Chart Data: #{data.inspect}"  # Debug log
+      
+        return chart if data.empty?
+      
+        avg_systolic = data.sum { |d| d['systolic'].to_f } / data.size
+        avg_diastolic = data.sum { |d| d['diastolic'].to_f } / data.size
+      
+        min_diastolic = data.map { |d| d['diastolic'].to_f }.min
+        max_systolic = data.map { |d| d['systolic'].to_f }.max
+        y_min = (min_diastolic * 0.8).round  # Set y-axis minimum to 20% below the lowest diastolic value
+        y_max = (max_systolic * 1.1).round  # Set y-axis maximum to 10% above the highest systolic value
+      
+        puts "Averages - Systolic: #{avg_systolic}, Diastolic: #{avg_diastolic}"  # Debug log
+      
+        y_scale = { domain: [y_min, y_max] }
+      
+        Vega.lite
+          .data(data)
+          .layer([
+            {
+              mark: { type: :line, color: '#ff7f0e' },
+              encoding: {
+                x: { field: :date, type: :temporal, title: 'Date' },
+                y: { field: :systolic, type: :quantitative, title: 'Blood Pressure (mmHg)', scale: y_scale }
+              }
+            },
+            {
+              mark: { type: :line, color: '#1f77b4' },
+              encoding: {
+                x: { field: :date, type: :temporal },
+                y: { field: :diastolic, type: :quantitative, scale: y_scale }
+              }
+            },
+            {
+              mark: { type: :point, color: '#ff7f0e', size: 60 },
+              encoding: {
+                x: { field: :date, type: :temporal },
+                y: { field: :systolic, type: :quantitative, scale: y_scale }
+              }
+            },
+            {
+              mark: { type: :point, color: '#1f77b4', size: 60 },
+              encoding: {
+                x: { field: :date, type: :temporal },
+                y: { field: :diastolic, type: :quantitative, scale: y_scale }
+              }
+            },
+            {
+              mark: { type: :rule, color: '#ff7f0e', strokeDash: [4, 4] },
+              encoding: {
+                y: { datum: avg_systolic, scale: y_scale }
+              }
+            },
+            {
+              mark: { type: :rule, color: '#1f77b4', strokeDash: [4, 4] },
+              encoding: {
+                y: { datum: avg_diastolic, scale: y_scale }
+              }
+            }
+          ])
+          .width(800)
+          .height(400)
+          .config(view: { stroke: nil })
+      end
+
       def setup_default_chart(chart)
         chart
           .mark(@presentation.chart_type.to_sym)
@@ -188,19 +262,6 @@
           { field: ['systolic', 'diastolic'], type: :quantitative, title: 'Blood Pressure' }
         else
           { field: :value, type: :quantitative, title: @presentation.title }
-        end
-      end
-
-      def add_weight_features(chart)
-        target_weight = 145 # This should ideally come from a configuration
-        case @presentation.chart_type
-        when 'arc'
-          add_arc_weight_features(chart, target_weight)
-        when 'gauge'
-          # The gauge chart is already set up in setup_gauge_chart, so we don't need to do anything here
-          chart
-        else
-          add_line_weight_features(chart, target_weight)
         end
       end
   
@@ -245,6 +306,7 @@
 
       def add_color_encoding(chart)
         return chart if @presentation.chart_type == 'gauge'
+        return chart if @metric[:name] == 'blood_pressure'
         return chart unless @presentation.lambda.present?
       
         begin
@@ -279,7 +341,9 @@
       end 
 
       def add_background_highlight(chart)
-        return chart if @presentation.chart_type == 'gauge' || @presentation.chart_type == 'stacked_line'
+        return chart if @presentation.chart_type == 'gauge' 
+        return chart if @presentation.chart_type == 'stacked_line'
+        return chart if @metric[:name] == 'blood_pressure'
         return chart unless @presentation.lambda.present?
       
         lambda_function = eval(@presentation.lambda)
@@ -313,7 +377,7 @@
           # Stacked line charts are already set up in setup_stacked_line_chart, so we don't need to do anything here
           chart
         when 'line', 'bar', 'area', 'point'
-          add_line_features(chart)
+          @metric[:name] == 'blood_pressure' ? chart : add_line_features(chart)
         else
           chart
         end

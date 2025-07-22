@@ -16,7 +16,7 @@ class HealthDataFileService
   end
 
   def create_files
-    FileUtils.mkdir_p(@fullpath)
+    FileUtils.mkdir_p("#{@fullpath}/Attachments/health_data")
     create_charts
     create_markdown_file
   end
@@ -40,13 +40,23 @@ class HealthDataFileService
   def process_metrics(raw_metrics)
     raw_metrics.map do |metric|
       processor = MetricProcessors::MetricProcessor.for(metric[:name])
-      {
-        name: metric[:name],
-        data: processor.process(metric[:data]),
-        summary: processor.summarize(metric[:data])
-      }
+      processed_data = processor.process(metric[:data])
+      
+      if metric[:name] == 'blood_pressure'
+        {
+          name: metric[:name],
+          data: processed_data.map { |d| d.merge('date' => d['date'].to_s) },
+          summary: processor.summarize(metric[:data])
+        }
+      else
+        {
+          name: metric[:name],
+          data: processed_data,
+          summary: processor.summarize(metric[:data])
+        }
+      end
     end
-  end
+  end 
 
   def create_charts
     @chart_paths = @metrics.map do |metric|
@@ -57,7 +67,7 @@ class HealthDataFileService
       puts "📈 Generated chart for #{metric[:name]}: "
       
       chart_path = "#{@date&.strftime("%Y-%m-%d")}_#{metric[:name].downcase.gsub(' ', '_')}.svg"
-      File.binwrite("#{@fullpath}/Attachments/#{chart_path}", chart.to_svg)
+      File.binwrite("#{@fullpath}/Attachments/health_data/#{chart_path}", chart.to_svg)
       chart_path
     end.compact
   end
@@ -80,6 +90,7 @@ class HealthDataFileService
       processor.format_summary(metric[:name], metric[:summary])
     end
     summary_lines.push("created: #{@date.strftime("%Y-%m-%d")}")
+    summary_lines.push("css_classes: 'wide-page, image-gallery'")
     summary_lines.join("\n")
   end
 

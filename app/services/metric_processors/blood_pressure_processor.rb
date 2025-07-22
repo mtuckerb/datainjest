@@ -1,9 +1,13 @@
-
 module MetricProcessors
-
   class BloodPressureProcessor
     def process(data)
-      data.map { |m| { date: m['date'], systolic: m['systolic'].to_f, diastolic: m['diastolic'].to_f } }
+      data.map do |m|
+        {
+          'date' => m['date'],
+          'systolic' => m['systolic'].to_f,
+          'diastolic' => m['diastolic'].to_f
+        }
+      end
     end
 
     def summarize(data)

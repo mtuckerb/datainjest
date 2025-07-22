@@ -11,6 +11,8 @@ module MetricProcessors
         StepCountProcessor.new
       when "weight_body_mass"
         WeightProcessor.new
+      when "basal_energy_burned"
+        AccumulatingMetricProcessor.new
       else
         DefaultMetricProcessor.new
       end

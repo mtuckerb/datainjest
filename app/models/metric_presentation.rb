@@ -4,7 +4,7 @@ class MetricPresentation < ApplicationRecord
   validates :chart_type, presence: true
   
   # Assuming chart_type is stored as a string, we can validate against allowed types
-  validates :chart_type, inclusion: { in: %w[line bar area point arc gauge stacked_line] }
+  validates :chart_type, inclusion: { in: %w[line bar area point arc gauge stacked_line blood_pressure] }
 
   # Optional fields
   validate :color_palette_is_valid_json
