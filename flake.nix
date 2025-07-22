@@ -51,7 +51,7 @@
               RAILS_LOG_PATH=$DATA_DIR/logs \
               RAILS_SERVE_STATIC_FILES=true \
               RAILS_ENV=production \
-              bundle exec puma -C config/puma.rb -b tcp://10.1.0.75:5007 -p 5007 &
+              bundle exec puma -C config/puma.rb -b tcp://0.0.0.0:5007 -p 5007 &
             echo "finished starting datainjest"
           '';
         }
