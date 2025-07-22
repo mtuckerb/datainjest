@@ -44,17 +44,22 @@
             chmod -R 755 $DATA_DIR
 
             export GEM_HOME=${gems}/${gems.ruby.gemPath}
-            export PATH=${gems}/bin:$PATH
+            export PATH=${gems}/bin:${pkgs.bundler}/bin:$PATH
 
             echo "Running Data Ingester..."
-              TMP_DIR=$DATA_DIR/tmp \
-              TMPDIR=$DATA_DIR/tmp \
-              LOG_DIR=$DATA_DIR/logs \
-              RAILS_TMP_PATH=$DATA_DIR/tmp \
-              RAILS_LOG_PATH=$DATA_DIR/logs \
-              RAILS_SERVE_STATIC_FILES=true \
-              RAILS_ENV=production \
-              ${gems}/bin/bundle exec puma -C config/puma.rb -b tcp://0.0.0.0:5007 -p 5007 &
+            echo "PATH: $PATH"
+            echo "GEM_HOME: $GEM_HOME"
+            which bundle
+            bundle --version
+
+            TMP_DIR=$DATA_DIR/tmp \
+            TMPDIR=$DATA_DIR/tmp \
+            LOG_DIR=$DATA_DIR/logs \
+            RAILS_TMP_PATH=$DATA_DIR/tmp \
+            RAILS_LOG_PATH=$DATA_DIR/logs \
+            RAILS_SERVE_STATIC_FILES=true \
+            RAILS_ENV=production \
+            bundle exec puma -C config/puma.rb -b tcp://0.0.0.0:5007 -p 5007 &
             echo "finished starting datainjest"
           '';
         }
