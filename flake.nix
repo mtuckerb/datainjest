@@ -45,6 +45,7 @@
         in {
           default = self.packages.${pkgs.system}.datainjest;
           inherit gems;
+          inherit datainjestApp;
           datainjest = pkgs.writeShellScriptBin "datainjest" ''
             #!/usr/bin/env bash
             set -e
@@ -156,7 +157,7 @@ nixosModules.default = { config, lib, pkgs, ... }:
           StateDirectory = "datainjest";
           RuntimeDirectory = "datainjest";
           LogsDirectory = "datainjest";
-          WorkingDirectory = "${self.packages.${pkgs.system}.datainjestApp}";
+          WorkingDirectory = "${cfg.package}/share/datainjest";
           User = "datainjest";
           Group = "datainjest";
         };
@@ -164,8 +165,8 @@ nixosModules.default = { config, lib, pkgs, ... }:
 
       environment.etc."datainjest/env".text = ''
         export GEM_HOME=${self.packages.${pkgs.system}.gems}/${self.packages.${pkgs.system}.gems.ruby.gemPath}
-        export PATH=${self.packages.${pkgs.system}.datainjestApp}/bin:${self.packages.${pkgs.system}.gems}/bin:${pkgs.bundler}/bin:${pkgs.ruby}/bin:$PATH
-        export RAILS_ROOT=${self.packages.${pkgs.system}.datainjestApp}
+        export PATH=${cfg.package}/bin:${self.packages.${pkgs.system}.gems}/bin:${pkgs.bundler}/bin:${pkgs.ruby}/bin:$PATH
+        export RAILS_ROOT=${cfg.package}/share/datainjest
         export RAILS_ENV=production
         export API_KEY=${cfg.apiKey}
         export HOME=${cfg.dataDir}
@@ -175,7 +176,7 @@ nixosModules.default = { config, lib, pkgs, ... }:
         export RAILS_TMP_PATH=${cfg.dataDir}/tmp
         export RAILS_LOG_PATH=${cfg.dataDir}/logs
         export RAILS_SERVE_STATIC_FILES=true
-        export BUNDLE_PATH=${self.packages.${pkgs.system}.datainjestApp}/gems
+        export BUNDLE_PATH=${cfg.package}/share/datainjest/gems
       '';
 
       system.activationScripts.datainjest-data-dir = ''
