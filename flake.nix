@@ -114,6 +114,10 @@
               default = "/var/lib/datainjest";
               description = "Directory to store ingest data";
             };
+            apiKey = lib.mkOption {
+              type = lib.types.str;
+              description = "API key for datainjest";
+            };
           };
 
           config = lib.mkIf cfg.enable {
@@ -143,6 +147,7 @@
                 RAILS_LOG_PATH = "${cfg.dataDir}/logs";
                 RAILS_SERVE_STATIC_FILES = "true";
                 RAILS_ENV = "production";
+                API_KEY = cfg.apiKey;
               };
             };
 
