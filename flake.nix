@@ -2,8 +2,8 @@
   description = "datainjest";
 
   inputs = {
-    flake-schemas.url = "https://flakehub.com/f/DeterminateSystems/flake-schemas/*.tar.gz";
-    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/*.tar.gz";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-schemas.url = "github:DeterminateSystems/flake-schemas";
   };
 
   outputs = { self, flake-schemas, nixpkgs }:
