@@ -158,7 +158,7 @@ nixosModules.default = { config, lib, pkgs, ... }:
           StateDirectory = "datainjest";
           RuntimeDirectory = "datainjest";
           LogsDirectory = "datainjest";
-          WorkingDirectory = cfg.dataDir;  # Remove the /share/ subdirectory
+          # Don't set WorkingDirectory since the directory might not exist yet
           User = "datainjest";
           Group = "datainjest";
           Environment = [
@@ -176,6 +176,11 @@ nixosModules.default = { config, lib, pkgs, ... }:
             "RAILS_SERVE_STATIC_FILES=true"
           ];
         };
+        preStart = ''
+          mkdir -p ${cfg.dataDir}/tmp ${cfg.dataDir}/logs ${cfg.dataDir}/share
+          chown -R datainjest:datainjest ${cfg.dataDir}
+          chmod -R 755 ${cfg.dataDir}
+        '';
       };
 
       environment.etc."datainjest/env".text = ''
