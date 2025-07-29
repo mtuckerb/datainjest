@@ -153,14 +153,28 @@ nixosModules.default = { config, lib, pkgs, ... }:
         after = [ "network.target" ];
         wantedBy = [ "multi-user.target" ];
         serviceConfig = {
-          ExecStart = "${pkgs.bash}/bin/bash -c 'source /etc/datainjest/env && ${cfg.package}/bin/datainjest ${cfg.dataDir}'";
+          ExecStart = "${cfg.package}/bin/datainjest ${cfg.dataDir}";
           Restart = "on-failure";
           StateDirectory = "datainjest";
           RuntimeDirectory = "datainjest";
           LogsDirectory = "datainjest";
-          WorkingDirectory = "${cfg.dataDir}/share/";
+          WorkingDirectory = cfg.dataDir;  # Remove the /share/ subdirectory
           User = "datainjest";
           Group = "datainjest";
+          Environment = [
+            "GEM_HOME=${self.packages.${pkgs.system}.gems}/${self.packages.${pkgs.system}.gems.ruby.gemPath}"
+            "PATH=${cfg.package}/bin:${self.packages.${pkgs.system}.gems}/bin:${pkgs.bundler}/bin:${pkgs.ruby}/bin"
+            "RAILS_ROOT=${self.packages.${pkgs.system}.datainjestApp}"
+            "RAILS_ENV=production"
+            "API_KEY=${cfg.apiKey}"
+            "HOME=${cfg.dataDir}"
+            "TMP_DIR=${cfg.dataDir}/tmp"
+            "TMPDIR=${cfg.dataDir}/tmp"
+            "LOG_DIR=${cfg.dataDir}/logs"
+            "RAILS_TMP_PATH=${cfg.dataDir}/tmp"
+            "RAILS_LOG_PATH=${cfg.dataDir}/logs"
+            "RAILS_SERVE_STATIC_FILES=true"
+          ];
         };
       };
 
