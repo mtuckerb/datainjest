@@ -158,7 +158,7 @@ nixosModules.default = { config, lib, pkgs, ... }:
           StateDirectory = "datainjest";
           RuntimeDirectory = "datainjest";
           LogsDirectory = "datainjest";
-          WorkingDirectory = "${cfg.package}/share/datainjest";
+          WorkingDirectory = "${cfg.dataDir}/share/";
           User = "datainjest";
           Group = "datainjest";
         };
