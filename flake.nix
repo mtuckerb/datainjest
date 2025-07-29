@@ -199,11 +199,6 @@ nixosModules.default = { config, lib, pkgs, ... }:
         export BUNDLE_PATH=${cfg.package}/share/datainjest/gems
       '';
 
-      system.activationScripts.datainjest-data-dir = ''
-        mkdir -p ${cfg.dataDir}
-        chown -R datainjest:datainjest ${cfg.dataDir}
-      '';
-
       users.users.datainjest = {
         isSystemUser = true;
         group = "datainjest";
