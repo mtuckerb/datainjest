@@ -50,7 +50,7 @@
             #!/usr/bin/env bash
             set -e
             DATA_DIR=''${1:-/var/lib/datainjest}
-            mkdir -p $DATA_DIR/tmp $DATA_DIR/logs
+            mkdir -p $DATA_DIR/tmp $DATA_DIR/logs $DATA_DIR/share
             chmod -R 755 $DATA_DIR
 
             export GEM_HOME=${gems}/${gems.ruby.gemPath}
@@ -104,6 +104,7 @@
               postgresql
             ];
             packages = with pkgs; [
+              bash
               nodePackages.yarn
               rubocop
               curl
