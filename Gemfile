@@ -18,7 +18,4 @@ gem "httparty", "~> 0.22.0"
 gem "dotenv-rails", "~> 3.1"
 gem "chronic", "~> 0.10.2"
 gem "vega", "~> 0.4.0"
-
-
-
-gem "bundle", "~> 0.0.1"
+gem "nokolexbor"

@@ -2,8 +2,8 @@
   description = "datainjest";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-schemas.url = "github:DeterminateSystems/flake-schemas";
+    flake-schemas.url = "https://flakehub.com/f/DeterminateSystems/flake-schemas/*.tar.gz";
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/*.tar.gz";
   };
 
   outputs = { self, flake-schemas, nixpkgs }:
@@ -73,7 +73,8 @@
             RAILS_LOG_PATH=$DATA_DIR/logs \
             RAILS_SERVE_STATIC_FILES=true \
             RAILS_ENV=production \
-            bundle exec puma -C config/puma.rb -b tcp://0.0.0.0:5007 -p 5007 
+            bundle i
+            bundle exec rails s -e production -p 5007 
             echo "finished starting datainjest"
           '';
         }
